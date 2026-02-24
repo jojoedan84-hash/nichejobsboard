@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Pasar Kerja Niche & Finder</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #FDFCFB;
+            color: #1A1A1A;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        .job-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .job-card:hover {
+            transform: translateY(-4px);
+            border-color: #10B981;
+            box-shadow: 0 12px 24px -8px rgba(16, 185, 129, 0.15);
+        }
+
+        .shimmer {
+            background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .custom-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Navigasi -->
+    <nav class="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center cursor-pointer" onclick="window.location.reload()">
+                    <div class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center mr-3 text-white font-bold">N</div>
+                    <span class="font-bold text-xl tracking-tight">Niche<span class="text-emerald-600">Jobs</span></span>
+                </div>
+                <div id="apiStatus" class="flex items-center text-[10px] sm:text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-500 uppercase tracking-wider">
+                    <span class="w-2 h-2 rounded-full bg-gray-400 mr-2"></span> Menghubungkan...
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+
+        <!-- Bagian Header -->
+        <section class="text-center max-w-3xl mx-auto space-y-4">
+            <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-gray-900">
+                Analisis Pasar Kerja <span class="text-emerald-600">Niche</span>
+            </h1>
+            <p class="text-lg text-gray-500 leading-relaxed">
+                Data real-time yang diekstrak setiap hari dari ZipRecruiter untuk mengidentifikasi tren gaji dan permintaan di sektor teknologi spesialis.
+            </p>
+        </section>
+
+        <!-- Grid Statistik -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="bg-white p-8 rounded-2xl border border-gray-100 custom-shadow">
+                <p class="text-sm font-medium text-gray-500 uppercase tracking-widest">Rata-rata Gaji</p>
+                <div id="stat-salary" class="mt-2 text-3xl font-bold text-emerald-600">IDR 0</div>
+                <p class="mt-2 text-xs text-gray-400">Berdasarkan data aktif terbaru.</p>
+            </div>
+            <div class="bg-white p-8 rounded-2xl border border-gray-100 custom-shadow">
+                <p class="text-sm font-medium text-gray-500 uppercase tracking-widest">Ketersediaan Remote</p>
+                <div id="stat-remote" class="mt-2 text-3xl font-bold text-blue-600">0%</div>
+                <p class="mt-2 text-xs text-gray-400">Pekerjaan yang mendukung WFH.</p>
+            </div>
+            <div class="bg-white p-8 rounded-2xl border border-gray-100 custom-shadow sm:col-span-2 lg:col-span-1">
+                <p class="text-sm font-medium text-gray-500 uppercase tracking-widest">Volume Lowongan</p>
+                <div id="stat-volume" class="mt-2 text-3xl font-bold text-gray-900">0</div>
+                <p class="mt-2 text-xs text-gray-400">Total posisi spesialis aktif.</p>
+            </div>
+        </section>
+
+        <!-- Bagian Grafik -->
+        <section id="analytics" class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-bold text-gray-900">Wawasan Visual</h2>
+                <span class="text-xs text-gray-400">Klik pada grafik untuk memfilter daftar</span>
+            </div>
+            
+            <div id="chartSkeleton" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="h-[400px] rounded-2xl shimmer"></div>
+                <div class="h-[400px] rounded-2xl shimmer"></div>
+            </div>
+
+            <div id="chartContent" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-2xl border border-gray-100 custom-shadow">
+                    <h3 class="text-sm font-bold text-gray-700 mb-6 uppercase tracking-wider">Perbandingan Gaji per Niche ($)</h3>
+                    <div class="chart-container">
+                        <canvas id="salaryChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-gray-100 custom-shadow">
+                    <h3 class="text-sm font-bold text-gray-700 mb-6 uppercase tracking-wider">Distribusi Lowongan Aktif</h3>
+                    <div class="chart-container">
+                        <canvas id="volumeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bagian Finder -->
+        <section id="finder" class="space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Penjelajah Lowongan</h2>
+                    <p class="text-sm text-gray-500">Menampilkan <span id="jobCount" class="font-bold text-emerald-600">0</span> lowongan aktif.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" id="searchInput" placeholder="Cari posisi atau perusahaan..." 
+                        class="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none w-full sm:w-64 text-sm">
+                    <select id="nicheFilter" class="px-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm cursor-pointer">
+                        <option value="All">Semua Niche</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="jobList" class="grid grid-cols-1 gap-4 min-h-[400px]">
+                <!-- Skeleton Loading -->
+                <div class="h-32 rounded-2xl shimmer"></div>
+                <div class="h-32 rounded-2xl shimmer"></div>
+                <div class="h-32 rounded-2xl shimmer"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-gray-100 py-12">
+        <div class="max-w-7xl mx-auto px-4 text-center space-y-4">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Data Pipeline v2.0</p>
+            <p class="text-sm text-gray-500">Dibuat dengan integrasi ZipRecruiter API. Data diperbarui secara otomatis setiap sesi.</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_KEY = "vrp73a4nwiihxix2ggaar26bb69ziyxa";
+        const API_URL = "https://api.ziprecruiter.com/jobs/v1";
+
+        const NICHE_KEYWORDS = [
+            "AI Ethics", "Green Energy", "Blockchain", "Space Tech", "AgriTech", "Cybersecurity", "FinTech"
+        ];
+
+        const FALLBACK_DATA = [
+            { id: 'f1', title: 'Senior AI Ethics Auditor', company: 'Future Mind Lab', location: 'Jakarta (Remote)', niche: 'AI Ethics', salaryMin: 80000, salaryMax: 120000, posted: 'Tersimpan', url: '#' },
+            { id: 'f2', title: 'Blockchain Engineer', company: 'CryptoVentures', location: 'Singapore', niche: 'Blockchain', salaryMin: 95000, salaryMax: 150000, posted: 'Tersimpan', url: '#' },
+            { id: 'f3', title: 'Security Architect', company: 'DefendIT', location: 'Remote', niche: 'Cybersecurity', salaryMin: 70000, salaryMax: 100000, posted: 'Tersimpan', url: '#' }
+        ];
+
+        let state = {
+            jobs: [],
+            filter: 'All',
+            search: '',
+            charts: { salary: null, volume: null }
+        };
+
+        async function initApp() {
+            setLoading(true);
+            updateStatus('waiting', 'Menghubungkan...');
+
+            try {
+                const query = encodeURIComponent("specialized tech");
+                const response = await fetch(`${API_URL}?search=${query}&api_key=${API_KEY}&jobs_per_page=40`);
+                
+                if (!response.ok) throw new Error("API Limit/Error");
+
+                const data = await response.json();
+                
+                if (data.jobs && data.jobs.length > 0) {
+                    state.jobs = data.jobs.map(formatJobData);
+                    updateStatus('online', 'API Aktif');
+                } else {
+                    throw new Error("No Data");
+                }
+            } catch (err) {
+                console.warn("API Error, menggunakan data lokal:", err.message);
+                state.jobs = FALLBACK_DATA;
+                updateStatus('fallback', 'Mode Offline/Fallback');
+            } finally {
+                setLoading(false);
+                setupFilters();
+                renderAll();
+            }
+        }
+
+        function formatJobData(raw) {
+            const text = (raw.name + " " + (raw.snippet || "")).toLowerCase();
+            let detectedNiche = "General Tech";
+            for (let niche of NICHE_KEYWORDS) {
+                if (text.includes(niche.toLowerCase())) {
+                    detectedNiche = niche;
+                    break;
+                }
+            }
+
+            return {
+                id: raw.id,
+                title: raw.name,
+                company: raw.hiring_company?.name || "Perusahaan Privat",
+                location: raw.location || "Remote",
+                niche: detectedNiche,
+                salaryMin: raw.salary_min_annual || 60000,
+                salaryMax: raw.salary_max_annual || 95000,
+                posted: raw.job_age === 0 ? "Hari Ini" : `${raw.job_age} hari lalu`,
+                url: raw.url
+            };
+        }
+
+        function setLoading(isLoading) {
+            const skeleton = document.getElementById('chartSkeleton');
+            const content = document.getElementById('chartContent');
+            if (!skeleton || !content) return;
+
+            if (isLoading) {
+                skeleton.classList.remove('hidden');
+                content.classList.add('hidden');
+            } else {
+                skeleton.classList.add('hidden');
+                content.classList.remove('hidden');
+            }
+        }
+
+        function updateStatus(type, msg) {
+            const el = document.getElementById('apiStatus');
+            if (!el) return;
+
+            el.innerHTML = `<span class="w-2 h-2 rounded-full mr-2"></span> ${msg}`;
+            const dot = el.querySelector('span');
+            
+            if (type === 'online') dot.className = 'w-2 h-2 rounded-full mr-2 bg-emerald-500';
+            else if (type === 'fallback') dot.className = 'w-2 h-2 rounded-full mr-2 bg-amber-500 animate-pulse';
+            else dot.className = 'w-2 h-2 rounded-full mr-2 bg-gray-400';
+        }
+
+        function setupFilters() {
+            const select = document.getElementById('nicheFilter');
+            if (!select) return;
+
+            const uniqueNiches = [...new Set(state.jobs.map(j => j.niche))];
+            
+            // Bersihkan opsi lama kecuali "Semua Niche"
+            select.innerHTML = '<option value="All">Semua Niche</option>';
+            
+            uniqueNiches.forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = n;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderAll() {
+            renderStats();
+            renderCharts();
+            renderJobList();
+        }
+
+        function renderStats() {
+            const total = state.jobs.length;
+            if (total === 0) return;
+
+            const avgSal = state.jobs.reduce((acc, j) => acc + j.salaryMax, 0) / total;
+            const remote = state.jobs.filter(j => j.location.toLowerCase().includes('remote')).length;
+
+            const salEl = document.getElementById('stat-salary');
+            const remEl = document.getElementById('stat-remote');
+            const volEl = document.getElementById('stat-volume');
+
+            if (salEl) salEl.textContent = `$${Math.round(avgSal/1000)}k`;
+            if (remEl) remEl.textContent = `${Math.round((remote/total)*100)}%`;
+            if (volEl) volEl.textContent = total;
+        }
+
+        function renderCharts() {
+            const niches = [...new Set(state.jobs.map(j => j.niche))];
+            const volumeData = niches.map(n => state.jobs.filter(j => j.niche === n).length);
+            const salaryData = niches.map(n => {
+                const list = state.jobs.filter(j => j.niche === n);
+                return Math.round(list.reduce((acc, j) => acc + j.salaryMax, 0) / list.length);
+            });
+
+            const canvasV = document.getElementById('volumeChart');
+            const canvasS = document.getElementById('salaryChart');
+            if (!canvasV || !canvasS) return;
+
+            // Grafik Volume
+            if (state.charts.volume) state.charts.volume.destroy();
+            state.charts.volume = new Chart(canvasV.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: niches,
+                    datasets: [{
+                        data: volumeData,
+                        backgroundColor: ['#10B981', '#3B82F6', '#6366F1', '#F59E0B', '#EF4444', '#8B5CF6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+                    onClick: (_, el) => { if(el[0]) setFilter(niches[el[0].index]); }
+                }
+            });
+
+            // Grafik Gaji
+            if (state.charts.salary) state.charts.salary.destroy();
+            state.charts.salary = new Chart(canvasS.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: niches,
+                    datasets: [{
+                        label: 'Gaji Rata-rata ($)',
+                        data: salaryData,
+                        backgroundColor: '#10B981',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } },
+                    plugins: { legend: { display: false } },
+                    onClick: (_, el) => { if(el[0]) setFilter(niches[el[0].index]); }
+                }
+            });
+        }
+
+        function renderJobList() {
+            const container = document.getElementById('jobList');
+            const countEl = document.getElementById('jobCount');
+            if (!container) return;
+
+            const filtered = state.jobs.filter(j => {
+                const matchNiche = state.filter === 'All' || j.niche === state.filter;
+                const matchSearch = j.title.toLowerCase().includes(state.search.toLowerCase()) || 
+                                    j.company.toLowerCase().includes(state.search.toLowerCase());
+                return matchNiche && matchSearch;
+            });
+
+            if (countEl) countEl.textContent = filtered.length;
+            
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="py-20 text-center text-gray-400">Tidak ada lowongan yang ditemukan.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(j => `
+                <div class="job-card bg-white p-6 rounded-2xl border border-gray-100 custom-shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="space-y-1 text-left">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">${j.niche}</span>
+                            <span class="text-[10px] text-gray-400">${j.posted}</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900">${j.title}</h3>
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                            <span class="flex items-center gap-1">🏢 ${j.company}</span>
+                            <span class="flex items-center gap-1">📍 ${j.location}</span>
+                            <span class="font-bold text-emerald-600">$${(j.salaryMin/1000).toFixed(0)}k - $${(j.salaryMax/1000).toFixed(0)}k</span>
+                        </div>
+                    </div>
+                    <a href="${j.url}" target="_blank" class="w-full md:w-auto text-center px-6 py-2.5 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-colors">
+                        Lamar Sekarang
+                    </a>
+                </div>
+            `).join('');
+        }
+
+        function setFilter(niche) {
+            state.filter = niche;
+            const filterEl = document.getElementById('nicheFilter');
+            if (filterEl) filterEl.value = niche;
+            renderJobList();
+            document.getElementById('finder').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- Event Listeners ---
+        window.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            const nicheFilter = document.getElementById('nicheFilter');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    state.search = e.target.value;
+                    renderJobList();
+                });
+            }
+
+            if (nicheFilter) {
+                nicheFilter.addEventListener('change', (e) => {
+                    state.filter = e.target.value;
+                    renderJobList();
+                });
+            }
+
+            initApp();
+        });
+
+    </script>
+</body>
+</html>
