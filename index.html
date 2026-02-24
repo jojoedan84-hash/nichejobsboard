@@ -186,21 +186,26 @@
 
         async function initApp() {
             setLoading(true);
-            updateStatus('waiting', 'Menghubungkan...');
+            updateStatus('waiting', 'Menghubungkan API...');
 
             try {
                 const query = encodeURIComponent("specialized tech");
-                const response = await fetch(`${API_URL}?search=${query}&api_key=${API_KEY}&jobs_per_page=40`);
+                // Menggunakan proxy CORS 'allorigins' untuk melewati restriksi browser di Vercel
+                const targetUrl = `${API_URL}?search=${query}&api_key=${API_KEY}&jobs_per_page=40`;
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
                 
-                if (!response.ok) throw new Error("API Limit/Error");
+                const response = await fetch(proxyUrl);
+                
+                if (!response.ok) throw new Error("Gagal menghubungi server proxy");
 
-                const data = await response.json();
+                const wrapper = await response.json();
+                const data = JSON.parse(wrapper.contents); // Data asli dari ZipRecruiter
                 
                 if (data.jobs && data.jobs.length > 0) {
                     state.jobs = data.jobs.map(formatJobData);
-                    updateStatus('online', 'API Aktif');
+                    updateStatus('online', 'Koneksi Online');
                 } else {
-                    throw new Error("No Data");
+                    throw new Error("Data Kosong");
                 }
             } catch (err) {
                 console.warn("API Error, menggunakan data lokal:", err.message);
